@@ -82,6 +82,7 @@ class draft(nn.Module):
 
 		# y = torch.cat((x_1.clone().detach(),x.clone().detach()),1)
 		out_ = []
+
 		if self.random == True:
 			for i, cnn in enumerate(self.skip, 1):
 				if i <= temp_ :

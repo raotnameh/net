@@ -6,14 +6,15 @@ from skimage import io
 from skimage.transform import resize
 class input_data(Dataset):
 
-    def __init__(self, root_dir,type, image_height = 224, image_width = 224, csv_file = "data.csv" ):
+    def __init__(self, root_dir,type, image_height = 224, image_width = 224, csv_file = "data" ):
         
         self.root_dir = root_dir
-        self.csv_file = csv_file
+        self.type = type
+        self.csv_file = csv_file + "_" +self.type + ".csv"
         self.image_height = image_height
         self.image_width = image_width
         self.number_of_class = len(os.listdir(self.root_dir))
-        print("total number of classes are :"+type, self.number_of_class )
+        print("total number of classes in "+self.type+" are : ", self.number_of_class )
         self.make_csv()
         with open(self.csv_file,'r') as dest_f:
             data_iter = csv.reader(dest_f)

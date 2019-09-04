@@ -29,10 +29,9 @@ parser.add_argument('--data-valid',help='enter the directory where the validatio
 parser.add_argument('--data-train',help='enter the directory where the train data of different classes is saved')
 parser.add_argument('--skipable-layer',default = 0,help='number of skipable layers')
 parser.add_argument("--random", action='store_true',help='if skipping is random or no')
+parser.add_argument('--save-path',help='enter the directory to save weights')
 
 args = parser.parse_args()
-random = args.random
-print("selection of skipping is  : ",random)
 
 input_train = input_data(root_dir = args.data_train, type = "train")
 train_dl =  DataLoader(input_train, batch_size=args.batch_size,shuffle=True, num_workers=4)
@@ -40,10 +39,13 @@ train_dl =  DataLoader(input_train, batch_size=args.batch_size,shuffle=True, num
 # exit()
 
 input_valid = input_data(root_dir = args.data_valid, type = "valid")
-valid_dl =  DataLoader(input_valid, batch_size=args.batch_size,shuffle=False, num_workers=4)
+valid_dl =  DataLoader(input_valid, batch_size=2*args.batch_size,shuffle=False, num_workers=4)
 
 
 if __name__ == '__main__':
+	update_weights = args.update_weights
+	random = args.random
+
 	model = draft(skipable_layers = int(args.skipable_layer), out_classes = input_train[0][3], random = random)
 	# model = nn.DataParallel(model)
 	brain = sub_draft()
@@ -52,7 +54,7 @@ if __name__ == '__main__':
 	if args.model_weights_path or args.brain_weights_path:
 		try:
 			model.load_state_dict(torch.load(args.model_weights_path), strict = True)
-			# brain.load_state_dict(torch.load(args.brain_weights_path), strict = True)
+			brain.load_state_dict(torch.load(args.brain_weights_path), strict = True)
 			print("trying")
 		except:
 			try:
@@ -82,8 +84,9 @@ if __name__ == '__main__':
 	optimizer = optim.Adam(model.parameters(), lr=args.learning_rate) 
 	optimizer_ = optim.Adam(brain.parameters(), lr = 0.01*args.learning_rate)
 	acc = 0
+	out_l = []
 	print("number of skipable_layers : ", args.skipable_layer)
-	update_weights = args.update_weights
+
 	for j in range(int(args.epochs)):
 		model.train()
 		running_loss = 0
@@ -110,16 +113,20 @@ if __name__ == '__main__':
 			(loss/update_weights).backward()
 
 			running_loss += loss.item()
-			
-			if i % update_weights == update_weights - 1:    # print every 2000 mini-batches	
+
+			if i % 50 == 49: # print every 50 mini-batches	
 				print('[%d, %5d] dumb_loss: %.3f' %(j + 1, i + 1, running_loss / update_weights))
 				print('[%d, %5d] smart_loss: %.3f' %(j + 1, i + 1, running_loss_ / (update_weights)))
 				running_loss = 0
 				running_loss_ = 0
+			
+			if i % update_weights == update_weights - 1:    # update weights as defined	
 				optimizer.step()
 				optimizer.zero_grad()
 				optimizer_.step()
 				optimizer_.zero_grad()
+
+		print("testing is : ", random)
 
 		if random == True:
 			accuracy = 0
@@ -136,6 +143,8 @@ if __name__ == '__main__':
 						output_c, output_s = model(input,temp_, brain, device)
 
 						out , predicted = torch.max(output_c, 1)
+						# print("out", target)
+						# print("predicted", predicted)
 						for i in range(len(target)):
 							if target[i] == predicted[i].item():
 								num = num + 1
@@ -143,6 +152,7 @@ if __name__ == '__main__':
 					accuracy = (num/length)*100
 					end = time()
 					print("accuracy at ",temp_," : ",accuracy, "  ", "time : ", (end - start))
+					out_l.append([temp_,accuracy,(end-start)])
 
 		elif random == False:
 			accuracy = 0
@@ -171,13 +181,13 @@ if __name__ == '__main__':
 				accuracy = (num/length)*100
 				end = time()
 				print("accuracy : ",accuracy, "  ", "time : ", (end - start))
-				print(pred)
+				# print(pred)
 				print(len_)
 				# exit()
 
 		if accuracy >= acc :
 			acc = accuracy
-			torch.save(model.state_dict(),"model_layers_" + str(args.skipable_layer)+"_" + str(acc) + "_nips.pth")
-			torch.save(brain.state_dict(),"brain_layers_" + str(args.skipable_layer)+"_" + str(acc) + "_nips.pth")
-
+			torch.save(model.state_dict(),"/home/hemant/hem/nips/weights/model_layers_" + str(args.skipable_layer)+"_" + str(acc) + "_nips.pth")
+			torch.save(brain.state_dict(),"/home/hemant/hem/nips/weights/brain_layers_" + str(args.skipable_layer)+"_" + str(acc) + "_nips.pth")
+		np.save("out_l",out_l)
 	print("training is finished")
