@@ -16,7 +16,7 @@ class draft(nn.Module):
 
 		self.layerb1_1 = conv_layer(3, 16, kernel_size=3, stride = (1,1), padding=1, max_pool = True)
 		self.layerb1_2 = conv_layer(16, 3, kernel_size=1, stride = (1,1), padding=0)
-		self.layerb1_3 = conv_layer(3, 32, kernel_size=3, stride = (1,1), padding=1)
+		self.layerb1_3 = conv_layer(3, 32, kernel_size=3, stride = (1,1), padding=1,max_pool = True)
 		self.drop_layer1 = nn.Dropout(0.25)
 		
 		self.layerb3_1 = conv_layer(32, 64, kernel_size=3, stride = (1,1), padding=1)
@@ -30,29 +30,20 @@ class draft(nn.Module):
 		skip = []
 
 		for i in range(0,self.len_):
-			conv_skip  = conv_layer(256, 256, kernel_size = 3, stride = (1,1), padding = 1)
-			drop = nn.Dropout(0.5)
-			skip.append((str(i), conv_skip))
-			skip.append(((str(i )+ "_"+ str(i)), drop))
+			skip.append((str(i),nn.Sequential(conv_layer(256, 256, kernel_size = 3, stride = (1,1), padding = 1)
+				,nn.Dropout(0.5))))
 
 		self.skip = nn.Sequential(OrderedDict(skip))
  		
-		after_skip = []
-
-		after_skip.append(("1_1" ,conv_layer(256, 512, kernel_size=3, stride = (2,2), padding=1, max_pool = True)))
-		after_skip.append(("1d" ,nn.Dropout(0.1)))
-
-		after_skip.append(("2_1" ,conv_layer(512, 512, kernel_size=3, stride = (2,2), padding=1, max_pool = True)))
-		after_skip.append(("2d" ,nn.Dropout(0.1)))
-
-		after_skip.append(("3_1" ,conv_layer(512, 1024, kernel_size=3, stride = (1,1), padding=1)))
-		after_skip.append(("3d" ,nn.Dropout(0.1)))
+		self.after_skip = nn.Sequential(conv_layer(256, 512, kernel_size=3, stride = (2,2), padding=1, max_pool = True)
+						  ,nn.Dropout(0.1)
+						  ,conv_layer(512, 512, kernel_size=3, stride = (2,2), padding=1, max_pool = True)
+						  ,nn.Dropout(0.1)
+						  ,conv_layer(512, 1024, kernel_size=3, stride = (1,1), padding=1)
+						  ,nn.Dropout(0.1))
 
 
-
-		self.after_skip = nn.Sequential(OrderedDict(after_skip))
-		
-		# self.fc1 = nn.Sequential(nn.Linear(1024, 2048),
+		# self.fc1 = nn.Sequential(nn.Linear(1024, 1024),
 		# 						 nn.ReLU6(True))
 		# self.fc1_drop = nn.Dropout(0.5)
 		self.fc2 = nn.Linear(1024, out_classes)
@@ -79,35 +70,31 @@ class draft(nn.Module):
 			for cnn in self.skip:
 				x = cnn(x)
 
-		else:
+		elif self.random == True:
+			for i, cnn in enumerate(self.skip, 1):
+				if i <= temp_ :
+					x = cnn(x)
+				else: break
+		elif self.random == False:
+			# input_ shape is [batch_size, 3, 224,224]
+			input_ = F.max_pool2d(input.clone().detach(),(2,2))
+			# input_ shape is [batch_size, 3, 112,112]
+			input_ = input_.to(device)
 
-			if self.random == True:
-				for i, cnn in enumerate(self.skip, 1):
-					if i <= temp_ :
+			print("using brain")
+			for i, cnn in enumerate(self.skip):
+				if i%2 == 0:
+					x_ = x.clone().detach()
+					x_ = x_.to(device_)
+					# x_ shape is [batch_size, 256, 112, 112]
+					surety = brain(input_, x_)
+					out_.append(surety)
+					# print(surety.item())
+					if surety.item()  <= 0.5:
 						x = cnn(x)
 					else: break
-
-			else:
-				# input_ shape is [batch_size, 3, 224,224]
-				input_ = F.max_pool2d(input.clone().detach(),(2,2))
-				# input_ shape is [batch_size, 3, 112,112]
-				input_ = input_.to(device)
-
-				print("using brain")
-				for i, cnn in enumerate(self.skip):
-					if i%2 == 0:
-						x_ = x.clone().detach()
-						x_ = x_.to(device_)
-						# x_ shape is [batch_size, 256, 112, 112]
-						surety = brain(input_, x_)
-						out_.append(surety)
-						# print(surety.item())
-						if surety.item()  <= 0.5:
-							x = cnn(x)
-						else: break
 			# exit()
-		for cnn in self.after_skip:
-			x = cnn(x)
+		x = self.after_skip(x)
 		
 		m =  nn.AvgPool2d((x.size()[2],x.size()[3]),stride = 1)
 		x = m(x)

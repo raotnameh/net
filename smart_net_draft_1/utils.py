@@ -1,5 +1,5 @@
-#supporting classes and fucntions
-#for any queries contact, raotnameh@gmail.com or +91 8285207072
+import torch
+import torch.nn as nn
 
 def get_param_size(model):
         params = 0
@@ -53,47 +53,3 @@ class conv_layer(nn.Module):
     def forward(self, x):
         x = self.conv(x) 
         return x
-
-class rnn_layer(nn.Module):
-    def __init__(self,input_size,hidden_size=512,num_layers=1,dropout_=0.5,bidirectional=False):
-        super(rnn_layer, self).__init__()
-
-        self.rnn = nn.RNN(input_size,hidden_size,num_layers,dropout=dropout_,bidirectional=bidirectional) 
-
-    def forward(self,input,h0):
-        out,hn = self.rnn(input,h0)
-        return out,hn
-
-
-
-#input shape: seq_len, batch, input_size
-#h_0 shape num_layers * num_directions, batch, hidden_size
-
-#sequence length means = length of the input i.e. to roll into how many time steps.
-#input size = list of list of input
-
-
-class rnn(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(RNN, self).__init__()
-        self.hidden_size = hidden_size
-
-        self.i2h = nn.Linear(n_categories + input_size + hidden_size, hidden_size)
-        self.i2o = nn.Linear(n_categories + input_size + hidden_size, output_size)
-        self.o2o = nn.Linear(hidden_size + output_size, output_size)
-        self.dropout = nn.Dropout(0.1)
-        self.softmax = nn.LogSoftmax(dim=1)
-
-    def forward(self, input, hidden):
-        input_combined = torch.cat((input, hidden), 1)
-        hidden = self.i2h(input_combined)
-        output = self.i2o(input_combined)
-        output_combined = torch.cat((hidden, output), 1)
-        output = self.o2o(output_combined)
-        output = self.dropout(output)
-        output = self.softmax(output)
-        return output, hidden
-
-    def initHidden(self):
-        return torch.zeros(1, self.hidden_size)
-
