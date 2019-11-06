@@ -40,7 +40,7 @@ input_train = input_data(root_dir = args.data_train, type = "train")
 train_dl =  DataLoader(input_train, batch_size=args.batch_size,shuffle=True, num_workers=4)
 
 input_valid = input_data(root_dir = args.data_valid, type = "valid")
-valid_dl =  DataLoader(input_valid, batch_size=2*args.batch_size,shuffle=False, num_workers=4)
+valid_dl =  DataLoader(input_valid, batch_size=args.batch_size,shuffle=False, num_workers=4)
 
 
 if __name__ == '__main__':
@@ -82,7 +82,9 @@ if __name__ == '__main__':
 	out_l = []
 	print("number of skipable_layers : ", args.skipable_layer)
 	if random == True: print("random skiping")
-	present_loss = []
+	present_train_loss = []
+	present_val_loss = []
+	accur = []
 	for j in range(int(args.epochs)):
 
 		#Training
@@ -90,6 +92,8 @@ if __name__ == '__main__':
 		model.train()
 		running_loss = 0
 		running_loss_ = 0
+		val_running_loss = 0
+		present_running_loss = 0
 		print("start of epoch: ", j+1)
 		m = 0
 		optimizer.zero_grad()
@@ -111,7 +115,18 @@ if __name__ == '__main__':
 			(loss/update_weights).backward()
 
 			running_loss += loss.item()
-			present_loss.append([j,i,running_loss])
+			present_running_loss += loss.item()
+
+			# update weights as defined
+			if i % update_weights == update_weights - 1:   
+				present_train_loss.append([j,i,present_running_loss]) 
+				temp_ = np.random.randint(int(args.skipable_layer)+1, size=1)	
+				optimizer.step()
+				optimizer.zero_grad()
+				if args.brain == True:
+					optimizer_.step()
+					optimizer_.zepresent_ro_grad
+				present_running_loss = 0
 
 			# print every 50 mini-batches
 			if i % 50 == 49: 	
@@ -119,16 +134,6 @@ if __name__ == '__main__':
 				if args.brain == True: print('[%d, %5d] smart_loss: %.3f' %(j + 1, i + 1, running_loss_ / (update_weights)))
 				running_loss = 0
 				running_loss_ = 0
-
-			# update weights as defined
-			if i % update_weights == update_weights - 1:    
-				temp_ = np.random.randint(int(args.skipable_layer)+1, size=1)	
-				optimizer.step()
-				optimizer.zero_grad()
-				if args.brain == True:
-					optimizer_.step()
-					optimizer_.zero_grad()
-
 
 		# Validation
 
@@ -142,12 +147,18 @@ if __name__ == '__main__':
 				start = time()
 				for i, data in enumerate(valid_dl, 0):	
 					model.eval()
+
 					input, target, img_name, number_of_class = data
-					input= (input.type(torch.float32)).to(device)
+					input, target = (input.type(torch.float32)).to(device), target.to(device)
 
 					output_c, output_s = model(input, device, args.baseline, temp_, brain)
 					out , predicted = torch.max(output_c, 1)
 
+					loss = criterion(output_c, target)
+					val_running_loss += loss.item()
+					if i % update_weights == update_weights - 1: 
+						present_val_loss.append([j,i,val_running_loss])
+						val_running_loss = 0
 					for i in range(len(target)):
 						if target[i] == predicted[i].item():
 							num = num + 1
@@ -166,11 +177,16 @@ if __name__ == '__main__':
 					for i, data in enumerate(valid_dl, 0):	
 						model.eval()
 						input, target, img_name, number_of_class = data
-						input= (input.type(torch.float32)).to(device)
+						input, target = (input.type(torch.float32)).to(device), target.to(device)
 
 						output_c, output_s = model(input, device, args.baseline, temp_, brain)
-
 						out , predicted = torch.max(output_c, 1)
+
+						loss = criterion(output_c, target)
+						val_running_loss += loss.item()
+						if i % update_weights == update_weights - 1:   
+							present_val_loss.append([j,i,val_running_loss])
+							val_running_loss = 0
 
 						for i in range(len(target)):
 							if target[i] == predicted[i].item():
@@ -180,13 +196,19 @@ if __name__ == '__main__':
 					end = time()
 					print("accuracy at ", temp_, " is : ",accuracy, " AND ", " It took : ", (end - start), " seconds ")		
 
+		accur.append(accuracy)
 		if accuracy >= acc :
 			acc = accuracy
-			torch.save(model.state_dict(),str(args.save_path) + "model_layers_" + str(acc) + "_nips.pth")
+
+			try: model_state_dict = model.module.state_dict()
+			except : model_state_dict = model.state_dict()
+			torch.save(model_state_dict,str(args.save_path) + "model_layers_" + str(acc) + "_nips.pth")
 			if args.brain == True: torch.save(brain.state_dict(),str(args.save_path),"brain_layers_" + str(acc) + "_nips.pth")
 
-	with open(str(args.save_path+"loss.txt"), "w") as write_file:
-		print("path: ", str(args.save_path+"loss.txt"))
-		json.dump(present_loss, write_file)
-
+	with open(str(args.save_path+"train_loss.txt"), "w") as write_file:
+		json.dump(present_train_loss, write_file)
+	with open(str(args.save_path+"val_loss.txt"), "w") as write_file:
+		json.dump(present_val_loss, write_file)
+	with open(str(args.save_path+"acc.txt"), "w") as write_file:
+		json.dump(accur, write_file)
 	print("training is finished")
