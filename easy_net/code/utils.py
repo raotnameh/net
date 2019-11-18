@@ -59,19 +59,20 @@ class conv_layer(nn.Module):
 def switch(out, less_than = 0.75,target = None,set = "val"):
 	soft = nn.functional.softmax(out,dim = 1)
 	max_, _ = torch.max(soft,1)
-	sum_ = max_.clone().detach().mean().item()
+	sum_ = max_.clone().detach().mean().item() # surety
 	with open("prob.txt" ,"a") as f:
 		f.write(str(sum_)+"\n")
 
 	if set == "train":
-		num = 0
+		num = 0.0
 		out , predicted = torch.max(out, 1)
 		for k in range(len(target)):
 			if target[k] == predicted[k].item():
 				num = num + 1
 
-		if  sum_*0.95 <= less_than  and num/len(target) >= less_than :
-			# print("sure", sum_, "  true", num/len(target))
+		if  sum_*0.95 >= less_than  and num/len(target) >= less_than : # surety and accuracy
+			return False
+		elif sum_*0.95 <= less_than  and num/len(target) <= less_than :
 			return True
 		else: return False
 
