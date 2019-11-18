@@ -1,0 +1,44 @@
+we have one element called sureity, it means how sure we are of our decision(output of nn softmax layer).
+
+
+trained on 10000 examples:-
+
+results of 1st draft: 
+trained on 200 epochs
+with switching accuracy
+
+without switching accuracy
+
+
+results of vgg after 20 epoch
+85 %
+
+
+
+
+
+
+sure logic 
+Let's say, There is a question you have to answer based on some reasoning you have in your mind (let's say you choose 5 reasons to be sure of your answer).  Either you can be right or wrong depending on your reasoning.
+
+4 cases arise out of the above statement:
+
+1- you are sure but you are wrong
+2- you are sure and you are right 
+3- you are not sure and you are wrong
+4-you are not sure but you are right
+
+
+Based on the above 4 cases, either you can look for more number of reasons(SWITCH) or choose different 5 reasons(NOT TO SWITCH). so that now you are right
+
+conditions
+1.you try to be sure before looking for more number of reasons(SWITCHING)
+2.if you are wrong and you are not sure, you do not switch. 
+
+you have to choose either you would be Switching or Not be switching for each of the 4 options above said.
+
+Example:
+1-you are sure but you are wrong: SWITCH ????
+2- you are sure and you are right: you choose NOT to switch as the number of reasons are enough
+3-you are not sure and you are wrong: you choose NOT to switch. because of condition 2.
+4- you are not sure but you are right: you choose to SWITCH to be surer that you are right. because of the condition 1
