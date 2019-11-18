@@ -6,7 +6,7 @@ from skimage import io
 from skimage.transform import resize
 class input_data(Dataset):
 
-    def __init__(self, root_dir,type, image_height = 224, image_width = 224, csv_file = "data" ):
+    def __init__(self, root_dir,type, image_height = 120, image_width = 224, csv_file = "data" ):
         
         self.root_dir = root_dir
         self.type = type

@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
 	optimizer_1 = optim.Adam(feature_1.parameters(), lr=args.learning_rate*10)
 	optimizer_2 = optim.Adam(feature_2.parameters(), lr=args.learning_rate*10)
-	optimizer_d = optim.Adam(decision_.parameters(), lr=args.learning_rate)	
+	optimizer_d = optim.Adam(decision_.parameters(), lr=args.learning_rate*0.1)	
 	optimizer_1.zero_grad()
 	optimizer_2.zero_grad()
 	optimizer_d.zero_grad()
@@ -100,18 +100,20 @@ if __name__ == '__main__':
 			if switch(out, less_than, target,"train") == True:
 				switch_ +=1
 				
-				loss_1 = criterion_d(out, target)
-				loss_1.backward()
+				# loss_1 = criterion_d(out, target)
+				# loss_1.backward()
+				# optimizer_1.step()
+				# optimizer_d.step()
+				# optimizer_d.zero_grad()
 
 				out_2 = feature_2(out_1.clone().detach())
 				out = decision_(out_2)
 				loss = criterion_d(out, target)
 				loss.backward()
-				optimizer_1.step()
 				optimizer_2.step()
 				optimizer_d.step()
 
-				running_loss += loss.item() + loss_1.item()
+				running_loss += loss.item() #+ loss_1.item()
 				
 
 			else: 

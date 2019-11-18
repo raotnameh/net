@@ -70,7 +70,7 @@ def switch(out, less_than = 0.75,target = None,set = "val"):
 			if target[k] == predicted[k].item():
 				num = num + 1
 
-		if  sum_ <= less_than and num/len(target) >= less_than :
+		if  sum_*0.95 <= less_than  and num/len(target) >= less_than :
 			# print("sure", sum_, "  true", num/len(target))
 			return True
 		else: return False
@@ -79,5 +79,3 @@ def switch(out, less_than = 0.75,target = None,set = "val"):
 		if  sum_ <= less_than :
 			return True
 		else: return False 
-		
-		
