@@ -34,7 +34,7 @@ input_train = input_data(root_dir = args.data_train, type = "train")
 train_dl =  DataLoader(input_train, batch_size=args.batch_size,shuffle=True, num_workers=4)
 
 input_valid = input_data(root_dir = args.data_valid, type = "valid")
-valid_dl =  DataLoader(input_valid, batch_size=2,shuffle=False, num_workers=4)
+valid_dl =  DataLoader(input_valid, batch_size=1,shuffle=False, num_workers=4)
 
 less_than = args.less_than
 # os.system("rm prob.txt")
@@ -182,8 +182,8 @@ if __name__ == '__main__':
 			feature_1_state_dict = feature_1.state_dict()
 			feature_2_state_dict = feature_2.state_dict()
 			decision_state_dict = decision_.state_dict()
-		torch.save(feature_1_state_dict,str(args.save_path) + "epoch_"+j+"feature_1" + ".pth")
-		torch.save(feature_2_state_dict,str(args.save_path) + "epoch_"+j+"feature_2" + ".pth")
-		torch.save(decision_state_dict,str(args.save_path) + "epoch_"+j+"decision" + ".pth")
+		torch.save(feature_1_state_dict,str(args.save_path) + "epoch_"+str(j)+"feature_1" + ".pth")
+		torch.save(feature_2_state_dict,str(args.save_path) + "epoch_"+str(j)+"feature_2" + ".pth")
+		torch.save(decision_state_dict,str(args.save_path) + "epoch_"+str(j)+"decision" + ".pth")
 
 	print("training is finished")
