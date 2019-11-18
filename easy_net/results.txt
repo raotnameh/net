@@ -38,7 +38,7 @@ conditions
 you have to choose either you would be Switching or Not be switching for each of the 4 options above said.
 
 Example:
-1-you are sure but you are wrong:  SWITCH ???
+1-you are sure but you are wrong:  not to SWITCH ???
 2- you are sure and you are right: you choose NOT to switch as the number of reasons are enough
 3-you are not sure and you are wrong: Switch
 4- you are not sure but you are right: you choose to SWITCH to be surer that you are right. because of the condition 1
