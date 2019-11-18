@@ -56,10 +56,9 @@ if __name__ == '__main__':
 
 	if args.weights == True:
 		print("pre-trained weights are used")
-		feature_1.load_state_dict(torch.load("../weights/feature_1.pth",map_location="cuda:"+str(args.gpu_rank)), strict = True)
-		feature_2.load_state_dict(torch.load("../weights/feature_2.pth",map_location="cuda:"+str(args.gpu_rank)), strict = True)
-		try:decision_.load_state_dict(torch.load("../weights/decision.pth",map_location="cuda:"+str(args.gpu_rank)), strict = True)
-		except:pass
+		feature_1.load_state_dict(torch.load("../weights/final_feature_1.pth",map_location="cuda:"+str(args.gpu_rank)), strict = True)
+		feature_2.load_state_dict(torch.load("../weights/final_feature_2.pth",map_location="cuda:"+str(args.gpu_rank)), strict = True)
+		decision_.load_state_dict(torch.load("../weights/final_decision.pth",map_location="cuda:"+str(args.gpu_rank)), strict = True)
 	# for param in model.parameters():
 	# 	param.requires_grad = False
 
@@ -99,12 +98,6 @@ if __name__ == '__main__':
 
 			if switch(out, less_than, target,"train") == True:
 				switch_ +=1
-				
-				# loss_1 = criterion_d(out, target)
-				# loss_1.backward()
-				# optimizer_1.step()
-				# optimizer_d.step()
-				# optimizer_d.zero_grad()
 
 				out_2 = feature_2(out_1.clone().detach())
 				out = decision_(out_2)
@@ -141,8 +134,8 @@ if __name__ == '__main__':
 		with torch.no_grad():
 			start = time()
 			for i, data in enumerate(valid_dl, 0):	
-				for j in models:
-					j.eval()
+				for b in models:
+					b.eval()
 
 				input, target, img_name, number_of_class = data
 				input, target = (input.type(torch.float32)).to(device), target.to(device)
@@ -178,8 +171,19 @@ if __name__ == '__main__':
 				feature_1_state_dict = feature_1.state_dict()
 				feature_2_state_dict = feature_2.state_dict()
 				decision_state_dict = decision_.state_dict()
-			torch.save(feature_1_state_dict,str(args.save_path) + "feature_1" + ".pth")
-			torch.save(feature_2_state_dict,str(args.save_path) + "feature_2" + ".pth")
-			torch.save(decision_state_dict,str(args.save_path) + "decision" + ".pth")
+			torch.save(feature_1_state_dict,str(args.save_path) + "final_feature_1" + ".pth")
+			torch.save(feature_2_state_dict,str(args.save_path) + "final_feature_2" + ".pth")
+			torch.save(decision_state_dict,str(args.save_path) + "final_decision" + ".pth")
+		try: 
+			feature_1_state_dict = feature_1.module.state_dict()
+			feature_2_state_dict = feature_2.module.state_dict()
+			decision_state_dict = decision_.module.state_dict()
+		except : 
+			feature_1_state_dict = feature_1.state_dict()
+			feature_2_state_dict = feature_2.state_dict()
+			decision_state_dict = decision_.state_dict()
+		torch.save(feature_1_state_dict,str(args.save_path) + "epoch_"+j+"feature_1" + ".pth")
+		torch.save(feature_2_state_dict,str(args.save_path) + "epoch_"+j+"feature_2" + ".pth")
+		torch.save(decision_state_dict,str(args.save_path) + "epoch_"+j+"decision" + ".pth")
 
 	print("training is finished")

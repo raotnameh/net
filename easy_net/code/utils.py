@@ -72,9 +72,7 @@ def switch(out, less_than = 0.75,target = None,set = "val"):
 
 		if  sum_*0.95 >= less_than  and num/len(target) >= less_than : # surety and accuracy
 			return False
-		elif sum_*0.95 <= less_than  and num/len(target) <= less_than :
-			return True
-		else: return False
+		else: return True
 
 	else:
 		if  sum_ <= less_than :
