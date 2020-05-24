@@ -1,6 +1,5 @@
 data/
 weights/
 
-# Jupyter Notebook
 .ipynb_checkpoints
-
+*.csv
