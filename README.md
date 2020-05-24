@@ -1,4 +1,5 @@
-**Neural net taking decisions with reasons.**
 
-This is work in progress. 
+**Smart neural-net: decisions with reasons.**
+
+Work in progress. 
 [Blog](https://raotnameh.github.io/sn/)
