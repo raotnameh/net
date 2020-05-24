@@ -2,4 +2,4 @@ data/
 weights/
 
 .ipynb_checkpoints
-*.csv
+.csv
