@@ -18,10 +18,12 @@ import warnings
 warnings.filterwarnings("ignore")
 os.environ["CUDA_VISIBLE_DEVICES"]= "4,3"
 
+total_acc = ''
+
 parser = argparse.ArgumentParser(description = "1st draft of SMART_NET")
-parser.add_argument("--epochs", default = 50, help = "enter the no. of epochs")
-parser.add_argument("--batch-size", type=int, default = 64, help = "enter the batch size")
-parser.add_argument("--learning-rate", type = float, default = 0.01, help = "enter the learning rate")
+parser.add_argument("--epochs", default = 100, help = "enter the no. of epochs")
+parser.add_argument("--batch-size", type=int, default = 32, help = "enter the batch size")
+parser.add_argument("--learning-rate", type = float, default = 0.001, help = "enter the learning rate")
 parser.add_argument('--cuda', dest='cuda', action='store_true', help='Use cuda to train model')
 parser.add_argument('--steps', type=int, default=1,help='number of recursive layers')
 parser.add_argument('--gpu-rank', default=0,help='If using distributed parallel for multi-gpu, sets the GPU for the process')
@@ -45,12 +47,13 @@ if __name__ == '__main__':
 	base_feature = feature_b()
 	base_decision = decision_r()
 	model = [[base_feature, base_decision]]
-	recursive_layers = [[f"feature_{i}", f"decision_{i}"] for i in range(1,args.steps+1)]
-	for i in recursive_layers:
-		model.append([feature_r(),decision_r()])
+	if args.steps >=1 :
+		recursive_layers = [[f"feature_{i}", f"decision_{i}"] for i in range(1,args.steps+1)]
+		for i in recursive_layers:
+			model.append([feature_r(),decision_r()])
 
 	device = torch.device("cuda" if args.cuda else "cpu")
-	if args.gpu_rank == True and args.pll == False:
+	if args.gpu_rank == True and args.cuda:
 		torch.cuda.set_device(int(args.gpu_rank))
 
 	# if args.weights == True:
@@ -65,7 +68,7 @@ if __name__ == '__main__':
 		for j in i:
 			j.to(device)
 	
-	hidden_size = 512
+	hidden_size = 128
 	rnn_layer = gru_layer(4096, hidden_size,batch_first=False, classes = input_train.classes()).to(device)
 
 	optimizers = []
@@ -76,45 +79,40 @@ if __name__ == '__main__':
 	criterion = nn.CrossEntropyLoss()
 	
 	# print(model)
-	print("no of parameters is : ", (get_param_size([j for i in model for j in i]))/1000000," Million")
+	print(f"no of parameters is : {((get_param_size([j for i in model for j in i]))/1000000):.3f} Million")
 	accuracy = 0
 	for j in range(int(args.epochs)):
-		for q in model:
-			for w in q:
-				w.train()
+
+		[w.train() for q in model for w in q]	#Training
 		running_loss = [0.0, 0.0]
-		start = time()
 		print("start of epoch: ", j+1)
-		#Training
+		start = time()
 		for i, data in enumerate(train_dl, 0):
-			
+			#input data
 			input, target, img_name, number_of_class = data
 			input, target = (input.type(torch.float32)).to(device), target.to(device)
-			
+	
+			#1st layer
 			f_1 = model[0][0](input)
 			d_1 = model[0][1](f_1)
-
+			#2nd layer
 			f_2 = model[1][0](f_1.clone().detach())
 			d_2 = model[1][1](f_2)
-			# print(d_2.shape)
-			# exit()	
-			# break
+			#concatenate the output from all the convolution layer to feed it to the rnn layer in one step
 			out = torch.cat((d_1,d_2)).view(2,d_2.shape[0],-1)
-			
+			#rnn layer
 			hidden_layer = torch.zeros(1,d_2.shape[0], hidden_size,dtype=torch.float32).to(device)
 			out = rnn_layer(out,hidden_layer)
 
-			
-			# print(out[:,-1,:])
-			# print(out[:,0,:].shape)
+			#loss at each time step
 			loss = []
 			for k in range(args.steps+1):
 				loss.append(criterion(out[:,k,:],target))
-			
+			#calulating loss for each tiem step
 			for r, l in enumerate(loss):
 				l.backward(retain_graph=True)
 				running_loss[r] += l.item()
-
+			#optimizer step
 			for m in optimizers:
 				m.step()
 			for jk in optimizers:
@@ -124,18 +122,17 @@ if __name__ == '__main__':
 			if i % 10 == 10 - 1:	
 				print('[%d, %5d] loss1: %.3f, loss2: %.3f' %(j + 1, i + 1, running_loss[0]/10, running_loss[1]/10))
 				running_loss = [0.0, 0.0]
+
 		end = time()
-		print(" It took : ", (end - start)/60, " mins for the last training epoch")
-		# print("in training the model switched ",(switch_/(i+1))*100, " % times in the previous epoch")
-		# continue
+		print(f"It took : {((end - start)/60):.2f} mins for the training step")
+		
 		# Validation
 		running_loss, acc, num, length =  [0, 0], [0, 0],  [0, 0], 0
 		with torch.no_grad():
 			start = time()
-			for i, data in tqdm(enumerate(valid_dl, 0)):	
-				for q in model:
-					for w in q:
-						w.eval()
+			[w.train() for q in model for w in q]	#evaluation
+			for i, data in enumerate(valid_dl, 0):	
+
 				input, target, img_name, number_of_class = data
 				input, target = (input.type(torch.float32)).to(device), target.to(device)
 
@@ -144,35 +141,35 @@ if __name__ == '__main__':
 
 				f_2 = model[1][0](f_1.clone().detach())
 				d_2 = model[1][1](f_2)
-				print()
 
 				out = torch.cat((d_1,d_2)).view(2,d_2.shape[0],-1)
 				hidden_layer = torch.zeros(1,d_2.shape[0], hidden_size,dtype=torch.float32).to(device)
 				out = rnn_layer(out,hidden_layer)
 
-				loss = []
 				for k in range(args.steps+1):
-					l = criterion(out[:,k,:],target)
-					loss.append(l)
-					running_loss[k] += l.item()
+					loss = criterion(out[:,k,:],target)
+					running_loss[k] += loss.item()
 
 					_, predicted = torch.max(out[:,k,:], 1)
-					# print(predicted)
-					# print(out[:,k,:])
 					for df in range(len(target)):
 						if target[df] == predicted[df].item():
 							num[k] += 1
 				length = length + len(target)
-				# break
-				
+
 			for i in range(len(acc)):
 				acc[i] = (num[i]/length)*100
-				print(f"accuracy is: {acc[i]}")
 			end = time()
+			for i in acc:
+				total_acc+= str(i) + ','
+			total_acc+='\n' 
+			with open('acc.json', "w") as f:
+				f.write(f"{total_acc}")
+			[print(f"Accuracy and val loss is : {acc[i]:.3f}--{running_loss[i]/(i+1):.3f} -AND- It took : {(end - start):.2f} seconds for the evaluation step.") for i in range(len(acc))]
+			
 
 
 
-			# print("accuracy and val loss is : ",acc,",",running_loss/(i+1), " --AND-- ", " It took : ", (end - start), " seconds ")
+			
 			# print("in validation the model switched ",(switch_/(i+1))*100, " % times in the previous epoch")
 
 		# if acc > accuracy :
