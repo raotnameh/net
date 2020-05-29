@@ -47,6 +47,9 @@ class input_data(Dataset):
             with open(self.csv_file,'r') as dest_f:
                 data_iter = csv.reader(dest_f)
                 self.data = [data for data in data_iter]
+
+    def classes(self):
+        return self.number_of_class
        
     def __len__(self):
         return len(self.data)
