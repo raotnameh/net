@@ -109,14 +109,20 @@ if __name__ == '__main__':
 			for k in range(args.steps+1):
 				loss.append(criterion(out[:,k,:],target))
 			#calulating loss for each tiem step
-			for r, l in enumerate(loss):
-				l.backward(retain_graph=True)
-				running_loss[r] += l.item()
+			#for r, l in enumerate(loss):
+				#l.backward(retain_graph=True)
+				#running_loss[r] += l.item()
+                        
+			loss[-1].backward()
+			running_loss[1]+=loss[-1].item()
+			optimizers[-1].step()
+			optimizers[-1].zero_grad()
+
 			#optimizer step
-			for m in optimizers:
-				m.step()
-			for jk in optimizers:
-				jk.zero_grad()
+			#for m in optimizers:
+			#	m.step()
+			#for jk in optimizers:
+			#	jk.zero_grad()
 		
 			# print every 25 mini-batches
 			if i % 10 == 10 - 1:	
@@ -164,7 +170,7 @@ if __name__ == '__main__':
 			total_acc+='\n' 
 			with open('acc.json', "w") as f:
 				f.write(f"{total_acc}")
-			[print(f"Accuracy and val loss is : {acc[i]:.3f}--{running_loss[i]/(i+1):.3f} -AND- It took : {(end - start):.2f} seconds for the evaluation step.") for i in range(len(acc))]
+			[print(f"Accuracy and val loss is : {acc[i]:.3f}--{running_loss[i]/(len(valid_dl)+1):.3f} -AND- It took : {(end - start):.2f} seconds for the evaluation step.") for i in range(len(acc))]
 			
 
 
